@@ -1,0 +1,74 @@
+#!/sbin/openrc-run
+
+name="homeassistant"
+description="Home Assistant Docker Compose Service"
+
+# The directory where your docker-compose.yml is located
+COMPOSE_DIR="/opt/homeassistant"
+# The container name as defined in your docker-compose.yml
+CONTAINER_NAME="homeassistant"
+
+# Commands that can run anytime
+extra_commands="update"
+# Commands that require the service to be running
+extra_started_commands="shell logs"
+
+depend() {
+    # Ensure the docker daemon is running and network is up before starting this service
+    need docker
+    after net-online
+}
+
+start() {
+    ebegin "Starting $name Docker Compose stack"
+    cd "$COMPOSE_DIR" || return 1
+    # Start the stack detached
+    docker compose up -d
+    eend $?
+}
+
+stop() {
+    ebegin "Stopping $name Docker Compose stack"
+    cd "$COMPOSE_DIR" || return 1
+    # Tear down the stack
+    docker compose down
+    eend $?
+}
+
+restart() {
+    ebegin "Restarting $name Docker Compose stack"
+    cd "$COMPOSE_DIR" || return 1
+    docker compose restart
+    eend $?
+}
+
+status() {
+    cd "$COMPOSE_DIR" || return 1
+    docker compose ps
+}
+
+shell() {
+    ebegin "Entering interactive terminal for $name"
+    cd "$COMPOSE_DIR" || return 1
+    docker compose exec "$CONTAINER_NAME" /bin/bash
+    eend $?
+}
+
+logs() {
+    ebegin "Tailing logs for $name (Press Ctrl+C to exit)"
+    cd "$COMPOSE_DIR" || return 1
+    docker compose logs -f
+    eend $?
+}
+
+update() {
+    ebegin "Pulling the latest image and updating $name"
+    cd "$COMPOSE_DIR" || return 1
+    # 1. Pull the newest image from Docker Hub
+    docker compose pull
+    # 2. Re-evaluate the stack.
+    #    If the image changed, Docker will automatically 
+    #    recreate the container with the new code while leaving your volumes intact.
+    docker compose up -d
+    eend $?
+}
